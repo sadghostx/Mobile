@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> mapbuilder by sadghostx </title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --main-font: 'Libre Baskerville', Georgia, serif;
+            --main-blue: #007bff;
+            --main-purple: #6f42c1; 
+            --button-bg: #e9ecef;
+            --button-border: #343a40;
+            --button-text: #343a40;
+            --button-hover: #dee2e6;
+            --button-active: #d6d6d6;
+            --control-bg: #ffffff;
+            --border-color: #e9ecef;
+            --light-grey: #f0f0f0;
+            --dark-grey-text: #343a40;
+
+            /* Mobile Optimization: Minimum tap target size */
+            --min-tap-size: 44px;
+        }
+
+        body {
+            font-family: var(--main-font);
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background-color: var(--light-grey);
+            min-height: 100vh;
+            margin: 0;
+            /* Default Desktop Layout */
+            flex-direction: row; 
+        }
+
+        #controls {
+            flex-shrink: 0;
+            width: 300px; /* Fixed width on desktop */
+            background: var(--control-bg);
+            padding: 0;
+            border-radius: 10px;
+            box-shadow: 0 0 0 1px var(--border-color), 0 8px 16px rgba(0,0,0,0.1); 
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+            overflow: visible;
+            /* TRANSITION FOR MOBILE HIDE/SHOW */
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+
+        /* Grouping for Control styling */
+        .control-group {
+            background-color: var(--control-bg);
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0;
+        }
+        .control-group:first-child {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        .control-group:last-child {
+            border-bottom: none;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+        .control-group h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            color: var(--dark-grey-text);
+            border-left: 4px solid var(--main-blue);
+            padding-left: 10px;
+            margin-bottom: 15px;
+            font-family: var(--main-font);
+        }
+
+        /* Main Canvas/Image Area */
+        #image-container {
+            flex-grow: 1;
+            background: var(--control-bg);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 0 1px var(--border-color), 0 8px 16px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column; 
+        }
+
+        #canvas-wrapper {
+            transition: transform 0.1s ease-out;
+            transform-origin: 0 0;
+            cursor: grab;
+            display: inline-block;
+            margin: 0 auto;
+            flex-grow: 1; 
+            /* Added for mobile touch events */
+            touch-action: none; 
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        canvas.eraser-cursor {
+            cursor: none;
+        }
+        
+        /* --- Button Styling (Enforced minimum size) --- */
+        .action-button, 
+        .action-button.utility-button-group > button,
+        #selectedColorButton {
+            padding: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            font-family: var(--main-font);
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 2px solid var(--button-border); 
+            border-radius: 4px;
+            /* Mobile: Enforce minimum tap size */
+            min-height: var(--min-tap-size); 
+            line-height: 1; 
+            box-sizing: border-box;
+        }
+        
+        .action-button:hover, 
+        .action-button.utility-button-group > button:hover,
+        #selectedColorButton:hover {
+            background-color: var(--button-hover);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Utility Button Groups */
+        .action-button.utility-button-group {
+            display: flex;
+            gap: 10px;
+            padding: 0;
+            margin-top: 0;
+            border: none;
+            background: none;
+        }
+        .action-button.utility-button-group > button {
+            flex-grow: 1;
+            margin: 0;
+            /* Override padding for smaller buttons in groups */
+            padding: 8px 10px; 
+            min-height: var(--min-tap-size);
+        }
+
+        /* Label Box Styling - Enforce tap size for actions */
+        .label-box {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px; 
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: #f8f9fa;
+            min-height: 36px; /* Slightly smaller than main buttons, still good tap area */
+        }
+        
+        .label-box-actions button {
+            /* Adjust size for mobile tapping */
+            min-width: var(--min-tap-size);
+            min-height: var(--min-tap-size);
+            background: none;
+            border: none;
+            color: #dc3545; 
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 0; /* Remove internal padding */
+            line-height: 1; 
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        /* Input Field Styling */
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc; 
+            border-radius: 4px;
+            box-sizing: border-box; 
+            font-family: var(--main-font);
+            margin-bottom: 5px;
+            /* Mobile: Enforce minimum tap size */
+            min-height: var(--min-tap-size);
+        }
+        
+        /* Toolbar under Image - Ensure controls don't wrap too aggressively */
+        #toolbar-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+        
+        #zoom-controls, #label-scale-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+        }
+        
+        #zoom-controls .action-button,
+        #label-scale-controls .action-button {
+            padding: 5px 10px;
+            /* Smaller buttons within the toolbar */
+            min-height: 36px; 
+            min-width: 36px;
+        }
+
+        /* --- NEW: Mobile Control Toggle --- */
+        #controls-toggle {
+            display: none; /* Hidden on desktop */
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 200;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            background-color: var(--main-blue);
+            color: white;
+            border: none;
+            padding: 0;
+        }
+        
+        #controls-toggle:hover {
+            background-color: #0056b3;
+        }
+
+        /* --- MEDIA QUERY: STACKED MOBILE LAYOUT --- */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column; /* Stack controls on top of image */
+                padding: 10px;
+                gap: 10px;
+            }
+
+            #controls-toggle {
+                display: block; /* Show FAB button */
+            }
+
+            #controls {
+                width: 100%; /* Full width on mobile */
+                box-sizing: border-box;
+                order: 1; /* Place controls at the top */
+                /* Initial state: Hidden off-screen/collapsed */
+                transform: translateY(-100%); 
+                opacity: 0;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 100vh;
+                max-height: 100vh;
+                z-index: 100;
+                overflow-y: auto; /* Allow scrolling within the controls panel */
+                border-radius: 0;
+                box-shadow: none;
+            }
+            
+            #controls.show {
+                /* When 'show' class is added */
+                transform: translateY(0);
+                opacity: 1;
+            }
+            
+            #image-container {
+                order: 2; /* Place image below controls */
+                flex-grow: 1;
+                /* Take up remaining viewport space */
+                min-height: calc(100vh - 20px); 
+            }
+            
+            /* Center toolbar items better on small screens */
+            #toolbar-container {
+                justify-content: center;
+                gap: 10px;
+            }
+            
+            #zoom-controls, #label-scale-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            #label-scale-controls input[type="range"] {
+                width: 100%; /* Full width slider */
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="controls-toggle">🛠️</button>
+
+    <div id="controls">
+        <div class="control-group" id="mobile-close-group" style="display: none; justify-content: flex-end;">
+            <button class="action-button" onclick="document.getElementById('controls').classList.remove('show');" style="width: auto; padding: 5px 15px;">Close Controls ❌</button>
+        </div>
+
+        <div class="control-group">
+            <h2>1. Image Load</h2>
+            <input type="file" id="imageLoader" accept="image/*">
+        </div>
+
+        <div class="control-group">
+            <h2>2. Define Label</h2>
+            <div class="input-group">
+                <input type="text" id="newLabelName" placeholder="Label Name" required>
+            </div>
+            
+            <button id="selectedColorButton">
+                <div id="selectedColorPreview"></div>
+                <span>Select Color</span>
+            </button>
+            
+            <button id="addLabelBtn" class="action-button" onclick="addLabel()">Add Label</button>
+        </div>
+        
+        <div id="color-swatch-popup">
+            <div class="popup-header">Choose a Label Color:</div>
+            <div id="color-swatch-selector"></div>
+        </div>
+
+        <div class="control-group">
+            <h2>3. Label List</h2>
+            <div id="labels-container"></div>
+            <p style="font-size: 0.8em; margin-top: 10px; font-family: var(--main-font);">
+                Click a label to select/deselect it for coloring.
+            </p>
+        </div>
+        
+        <div class="control-group">
+            <h2>4. Tools</h2>
+            <div class="action-button utility-button-group" style="margin-bottom: 10px;">
+                <button id="fillEraserBtn">🧹 Fill Eraser</button> 
+                <button id="dragEraserBtn">🖌️ Drag Eraser</button> 
+            </div>
+            <div class="action-button utility-button-group">
+                <button id="undoBtn" disabled>↩️ Undo</button>
+                <button id="clearAllBtn" disabled>🗑️ Clear All</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h2>5. Save</h2>
+            <button id="downloadBtn" class="action-button">Download Labeled Image</button>
+        </div>
+    </div>
+
+    <div id="image-container">
+        <div id="toolbar-container">
+            <div id="zoom-controls">
+                <span class="control-label">Zoom:</span>
+                <button id="zoomInBtn" class="action-button">+</button>
+                <button id="zoomOutBtn" class="action-button">-</button>
+                <span id="currentZoomLevel">100%</span>
+                <button id="zoomResetBtn" class="action-button">Reset</button>
+            </div>
+
+            <div id="label-scale-controls">
+                <span class="control-label">Label Size:</span>
+                <input type="range" id="labelScaleSlider" min="10" max="100" value="16"> 
+                <button id="labelScaleResetBtn" class="action-button">Reset</button>
+            </div>
+        </div>
+        
+        <div id="canvas-wrapper">
+            <canvas id="imageCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // --- Mobile Optimization Additions ---
+        const controlsToggle = document.getElementById('controls-toggle');
+        const controls = document.getElementById('controls');
+        const mobileCloseGroup = document.getElementById('mobile-close-group');
+        
+        // Show/Hide controls for mobile
+        controlsToggle.addEventListener('click', () => {
+            controls.classList.toggle('show');
+        });
+
+        // Show the close button only on small screens
+        function updateMobileUI() {
+            const isMobile = window.matchMedia("(max-width: 900px)").matches;
+            mobileCloseGroup.style.display = isMobile ? 'flex' : 'none';
+        }
+        window.addEventListener('resize', updateMobileUI);
+        document.addEventListener('DOMContentLoaded', updateMobileUI);
+        
+        // --- End Mobile Optimization Additions ---
+        
+        
+        // --- EXISTING CODE VARIABLES (Keep for continuity) ---
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const imageLoader = document.getElementById('imageLoader');
+        const labelsContainer = document.getElementById('labels-container');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const newLabelNameInput = document.getElementById('newLabelName');
+        const canvasWrapper = document.getElementById('canvas-wrapper');
+        const undoBtn = document.getElementById('undoBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const fillEraserBtn = document.getElementById('fillEraserBtn'); 
+        const dragEraserBtn = document.getElementById('dragEraserBtn'); 
+        const selectedColorButton = document.getElementById('selectedColorButton'); 
+        const selectedColorPreview = document.getElementById('selectedColorPreview'); 
+        const colorSwatchPopup = document.getElementById('color-swatch-popup'); 
+        const colorSwatchSelector = document.getElementById('color-swatch-selector'); 
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const zoomResetBtn = document.getElementById('zoomResetBtn');
+        const currentZoomLevelEl = document.getElementById('currentZoomLevel');
+        const labelScaleSlider = document.getElementById('labelScaleSlider'); 
+        const labelScaleResetBtn = document.getElementById('labelScaleResetBtn'); 
+
+        let currentImage = null;
+        let labels = [];
+        let activeLabel = null;
+        let selectedColor = null; 
+        
+        const FILL_OPACITY = 0.6;
+        const COLOR_TOLERANCE = 35; 
+        const GAP_TOLERANCE = 10;
+        const DEFAULT_LABEL_FONT_SIZE = 16; 
+        let currentLabelFontSize = DEFAULT_LABEL_FONT_SIZE; 
+        const DEFAULT_LABEL_STROKE_WIDTH = 2; 
+        let currentLabelStrokeWidth = DEFAULT_LABEL_STROKE_WIDTH;
+
+        const LABEL_FONT_FAMILY = "'Libre Baskerville', Arial"; 
+        const LABEL_STROKE_COLOR = '#000000'; 
+        
+        let zoomLevel = 1.0;
+        const MAX_ZOOM = 4.0;
+        const MIN_ZOOM = 0.5;
+        let isDragging = false;
+        let pan = { x: 0, y: 0, startX: 0, startY: 0 };
+        
+        let history = [];
+        const MAX_HISTORY_SIZE = 20;
+
+        const PRESET_COLORS = [
+            "#ff4040", "#40ff40", "#4040ff", 
+            "#ffaa40", "#40ffff", "#ff40ff", 
+            "#ffaa00", "#aa40ff", "#40aa00", 
+            "#00aaff"  
+        ];
+
+        let activeEraser = 0; 
+        let isErasingDragging = false;
+        const ERASER_SIZE = 30;
+
+        let originalImageData = null; 
+        
+        // --- NEW: TOUCH/PINCH ZOOM VARIABLES ---
+        let initialPinchDistance = null;
+        let initialZoom = 1.0;
+        let isPanningTouch = false;
+        let touchStartPan = { x: 0, y: 0 };
+        // --- END TOUCH VARIABLES ---
+
+        // --- UTILITY FUNCTIONS (Kept as is) ---
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.substring(1, 3), 16);
+            const g = parseInt(hex.substring(3, 5), 16);
+            const b = parseInt(hex.substring(5, 7), 16);
+            const a = Math.round(alpha * 255);
+            return [r, g, b, a];
+        }
+
+        function getPixelColor(data, x, y, width) {
+            const index = (y * width + x) * 4;
+            if (index < 0 || index >= data.length) return [0, 0, 0, 0];
+            return [data[index], data[index + 1], data[index + 2], data[index + 3]];
+        }
+
+        function setPixelColor(data, x, y, width, color) {
+            const index = (y * width + x) * 4;
+            data[index] = color[0];
+            data[index + 1] = color[1];
+            data[index + 2] = color[2];
+            data[index + 3] = color[3];
+        }
+
+        function colorDifference(color1, color2) {
+            return Math.sqrt(
+                Math.pow(color1[0] - color2[0], 2) +
+                Math.pow(color1[1] - color2[1], 2) +
+                Math.pow(color1[2] - color2[2], 2)
+            );
+        }
+        
+        // --- HISTORY TRACKING (Kept as is) ---
+        function saveState() {
+            if (!currentImage) return;
+
+            if (history.length >= MAX_HISTORY_SIZE) {
+                history.shift();
+            }
+            
+            history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            
+            updateUtilityButtonState();
+        }
+
+        function restoreState(imageData) {
+            if (!currentImage) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.putImageData(imageData, 0, 0);
+        }
+        
+        function updateUtilityButtonState() {
+            const hasHistory = history.length > 1;
+            undoBtn.disabled = !hasHistory;
+            clearAllBtn.disabled = history.length === 0;
+            
+            fillEraserBtn.disabled = !currentImage; 
+            dragEraserBtn.disabled = !currentImage;
+
+            fillEraserBtn.classList.toggle('active', activeEraser === 1);
+            dragEraserBtn.classList.toggle('active', activeEraser === 2);
+
+            if (!currentImage) {
+                activeEraser = 0;
+                canvas.classList.remove('eraser-cursor');
+            }
+        }
+        
+        // --- Color Picker Popup Logic (Kept as is) ---
+        selectedColorButton.addEventListener('click', () => {
+            colorSwatchPopup.style.display = 'flex';
+        });
+
+        document.addEventListener('click', (event) => {
+            const isClickInsideControls = document.getElementById('controls').contains(event.target);
+            const isClickInsidePopup = colorSwatchPopup.contains(event.target);
+            const isColorButton = selectedColorButton.contains(event.target);
+            
+            // Only hide if the click is not initiating or inside the popup/button
+            if (colorSwatchPopup.style.display === 'flex' && !isClickInsidePopup && !isColorButton) {
+                // Modified: also hide if click is outside controls area
+                if (isClickInsideControls) { 
+                     colorSwatchPopup.style.display = 'none';
+                }
+            }
+        });
+
+        function selectColor(color) {
+            selectedColor = color; 
+            selectedColorPreview.style.backgroundColor = color;
+            
+            const swatches = colorSwatchSelector.querySelectorAll('.color-swatch');
+            swatches.forEach(swatch => {
+                swatch.classList.remove('active', 'recommended');
+                if (swatch.dataset.color === color) {
+                    swatch.classList.add('active');
+                }
+            });
+            
+            highlightRecommendedColor();
+            colorSwatchPopup.style.display = 'none'; 
+        }
+
+        function highlightRecommendedColor() {
+            const usedColors = new Set(labels.map(l => l.color));
+            const nextColor = PRESET_COLORS.find(color => !usedColors.has(color));
+            
+            const swatches = colorSwatchSelector.querySelectorAll('.color-swatch');
+            swatches.forEach(swatch => {
+                if (swatch.dataset.color === nextColor && swatch.dataset.color !== selectedColor) {
+                    swatch.classList.add('recommended');
+                } else {
+                    swatch.classList.remove('recommended');
+                }
+            });
+
+            if (selectedColor === null || (nextColor && selectedColor !== nextColor)) {
+                 selectColor(nextColor || PRESET_COLORS[0]); 
+            }
+        }
+
+        function populateColorSwatches() {
+            colorSwatchSelector.innerHTML = '';
+            PRESET_COLORS.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.classList.add('color-swatch');
+                swatch.style.backgroundColor = color;
+                swatch.dataset.color = color;
+                swatch.title = color;
+                swatch.onclick = () => selectColor(color);
+                colorSwatchSelector.appendChild(swatch);
+            });
+            
+            selectedColor = null; 
+            highlightRecommendedColor();
+        }
+
+        // --- RENDER & LABEL MANAGEMENT (Kept as is) ---
+
+        function setActiveLabel(label) {
+            if (activeLabel && activeLabel.id === label.id) {
+                activeLabel = null;
+            } else {
+                activeLabel = label;
+                activeEraser = 0; 
+                canvas.classList.remove('eraser-cursor'); 
+                isErasingDragging = false;
+            }
+            renderLabels();
+            updateUtilityButtonState();
+        }
+
+        function renderLabels() {
+            labelsContainer.innerHTML = '';
+            labels.forEach(label => {
+                const div = document.createElement('div');
+                div.classList.add('label-box');
+                if (activeLabel && activeLabel.id === label.id) {
+                    div.classList.add('active');
+                }
+                div.onclick = () => setActiveLabel(label);
+
+                const preview = document.createElement('div');
+                preview.classList.add('label-color-preview');
+                preview.style.backgroundColor = label.color;
+
+                const text = document.createElement('span');
+                text.classList.add('label-box-text');
+                text.textContent = label.name;
+
+                const actions = document.createElement('div');
+                actions.classList.add('label-box-actions');
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '✕';
+                deleteBtn.title = 'Delete Label';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    labels = labels.filter(l => l.id !== label.id);
+                    if (activeLabel && activeLabel.id === label.id) activeLabel = null;
+                    renderLabels();
+                    highlightRecommendedColor(); 
+                };
+
+                actions.appendChild(deleteBtn);
+
+                div.appendChild(preview);
+                div.appendChild(text);
+                div.appendChild(actions); 
+
+                labelsContainer.appendChild(div);
+            });
+        }
+
+        // --- 1. IMAGE LOADING (Kept as is) ---
+        imageLoader.addEventListener('change', handleImage, false);
+
+        function handleImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                currentImage = new Image();
+                currentImage.onload = () => {
+                    canvas.width = currentImage.width;
+                    canvas.height = currentImage.height;
+
+                    setZoomLevel(1.0);
+                    pan = { x: 0, y: 0, startX: 0, startY: 0 };
+                    applyZoomAndPan();
+
+                    ctx.drawImage(currentImage, 0, 0);
+                    
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(currentImage, 0, 0);
+                    originalImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+
+
+                    history = []; 
+                    saveState(); 
+                    updateUtilityButtonState();
+                    
+                    populateColorSwatches();
+                };
+                currentImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- 2. LABEL DEFINITION (Kept as is) ---
+        function addLabel() {
+            const name = newLabelNameInput.value.trim();
+            const color = selectedColor;
+
+            if (!name) {
+                alert("Please enter a label name.");
+                return;
+            }
+            if (!color) {
+                alert("Please select a color swatch.");
+                return;
+            }
+
+            if (labels.some(label => label.name === name)) {
+                 alert("A label with this name already exists.");
+                 return;
+            }
+            
+            if (labels.some(label => label.color === color)) {
+                 if (!confirm(`Color ${color} is already used. Do you want to use it again?`)) {
+                    return;
+                 }
+            }
+
+            const newLabel = { name, color, id: Date.now() };
+            labels.push(newLabel);
+
+            newLabelNameInput.value = '';
+
+            setActiveLabel(newLabel);
+            highlightRecommendedColor();
+        }
+
+        // --- 3. COLOR FILLING (Click/Flood Fill) (Kept as is) ---
+
+        // Modified: added passive: true for performance
+        canvas.addEventListener('click', handleCanvasClick, { passive: true });
+        
+        fillEraserBtn.addEventListener('click', () => {
+            if (!currentImage) return;
+            activeEraser = (activeEraser === 1) ? 0 : 1; 
+            activeLabel = null; 
+            isErasingDragging = false; 
+            canvas.classList.remove('eraser-cursor'); 
+            renderLabels(); 
+            updateUtilityButtonState(); 
+        });
+
+        dragEraserBtn.addEventListener('click', () => {
+            if (!currentImage) return;
+            activeEraser = (activeEraser === 2) ? 0 : 2; 
+            activeLabel = null; 
+            isErasingDragging = false; 
+            canvas.classList.toggle('eraser-cursor', activeEraser === 2); 
+            renderLabels(); 
+            updateUtilityButtonState(); 
+        });
+
+
+        function getCanvasPoint(event) {
+            const rect = canvas.getBoundingClientRect();
+            // Use clientX/Y directly for mouse/click events
+            const clientX = event.clientX;
+            const clientY = event.clientY;
+            
+            const scaleX = canvas.width / rect.width; 
+            const scaleY = canvas.height / rect.height;
+
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
+            return { x: Math.floor(x), y: Math.floor(y) };
+        }
+        
+        // New: getCanvasPoint for touch events
+        function getCanvasPointFromTouch(touch) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width; 
+            const scaleY = canvas.height / rect.height;
+
+            const x = (touch.clientX - rect.left) * scaleX;
+            const y = (touch.clientY - rect.top) * scaleY;
+            return { x: Math.floor(x), y: Math.floor(y) };
+        }
+
+        function handleCanvasClick(event) {
+            if (!currentImage) {
+                alert("Please load an image first.");
+                return;
+            }
+            
+            // Prevent click handling if touch interaction is detected as a drag
+            if (isPanningTouch || initialPinchDistance !== null) return;
+            
+            // Check for touch tap which is not handled by the mousedown/up for drag
+            if (event.pointerType && (event.pointerType === 'touch' || event.pointerType === 'pen')) {
+                // If it's a touch event, it's likely handled by touchstart/touchend. 
+                // Let's only proceed if it's a mouse click.
+                if (event.type === 'click' && event.detail === 0) return; // Ignore fake clicks
+            }
+            
+            const { x, y } = getCanvasPoint(event);
+            
+            if (activeEraser === 0 && !activeLabel) {
+                 alert("Please select an active label or an eraser tool.");
+                 return;
+            }
+
+            if (activeEraser === 2) return; 
+
+            // saveState() will be called inside the handler functions
+            
+            if (activeEraser === 1) { 
+                saveState(); // Save before erase
+                handleFillEraserClick(x, y);
+                saveState(); // Save after erase
+            } else if (activeLabel) { 
+                saveState(); // Save before fill
+                handleFillClick(x, y);
+                saveState(); // Save after fill
+            }
+        }
+        
+        function handleFillClick(x, y) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0); 
+
+            const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const initialPixelColor = getPixelColor(data, x, y, canvas.width);
+
+            const fillColor = hexToRgba(activeLabel.color, FILL_OPACITY);
+
+            const filledPixelsCount = floodFill(data, x, y, canvas.width, canvas.height, initialPixelColor, fillColor, false); 
+
+            tempCtx.putImageData(imageData, 0, 0); 
+
+            if (filledPixelsCount > 0) {
+                tempCtx.font = `bold ${currentLabelFontSize}px ${LABEL_FONT_FAMILY}`; 
+                tempCtx.fillStyle = '#00000'; 
+                tempCtx.textAlign = 'center';
+                tempCtx.textBaseline = 'middle';
+                tempCtx.fillText(activeLabel.name, x, y); 
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+        }
+        
+        function handleFillEraserClick(x, y) {
+            if (!originalImageData) return;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0);
+            const currentImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = currentImageData.data;
+
+            const initialPixelColor = getPixelColor(data, x, y, canvas.width);
+            
+            if (initialPixelColor[3] < 100) return; 
+            
+            const clearedPixelsCount = floodFill(data, x, y, canvas.width, canvas.height, initialPixelColor, null, true, originalImageData); 
+
+            if (clearedPixelsCount > 0) {
+                tempCtx.putImageData(currentImageData, 0, 0); 
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+        }
+
+        // --- Drag Eraser Logic (Kept as is, but now respects touch logic) ---
+        canvas.addEventListener('mousedown', (e) => {
+            if (activeEraser === 2) { 
+                isErasingDragging = true;
+                saveState(); 
+                handleDragEraserMove(e); 
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (activeEraser === 2 && isErasingDragging) {
+                handleDragEraserMove(e);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isErasingDragging) {
+                isErasingDragging = false;
+                saveState(); 
+            }
+        });
+        
+        // NEW: Touch event for drag eraser
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1 && activeEraser === 2) {
+                 isErasingDragging = true;
+                 saveState();
+                 handleDragEraserMoveTouch(e.touches[0]);
+            }
+        }, { passive: true });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (isErasingDragging) {
+                e.preventDefault(); // Prevent scrolling
+                handleDragEraserMoveTouch(e.touches[0]);
+            }
+        }, { passive: false }); // Needs to be non-passive to prevent default
+        
+        canvas.addEventListener('touchend', () => {
+             if (isErasingDragging) {
+                isErasingDragging = false;
+                saveState();
+             }
+        });
+        // End Touch Eraser
+
+        function handleDragEraserMove(event) {
+            if (!currentImage || !originalImageData) return;
+
+            const { x, y } = getCanvasPoint(event);
+
+            const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = currentImageData.data;
+
+            const halfSize = ERASER_SIZE / 2;
+            const startX = Math.max(0, x - halfSize);
+            const startY = Math.max(0, y - halfSize);
+            const endX = Math.min(canvas.width, x + halfSize);
+            const endY = Math.min(canvas.height, y + halfSize);
+
+            for (let i = startX; i < endX; i++) {
+                for (let j = startY; j < endY; j++) {
+                    const dist = Math.sqrt(Math.pow(i - x, 2) + Math.pow(j - y, 2));
+                    if (dist <= halfSize) {
+                        const originalColor = getPixelColor(originalImageData.data, i, j, canvas.width);
+                        setPixelColor(data, i, j, canvas.width, originalColor);
+                    }
+                }
+            }
+            ctx.putImageData(currentImageData, 0, 0);
+        }
+        
+        // NEW: Touch version of drag eraser
+        function handleDragEraserMoveTouch(touch) {
+            if (!currentImage || !originalImageData) return;
+
+            const { x, y } = getCanvasPointFromTouch(touch);
+            // ... (rest of the handleDragEraserMove logic remains the same)
+            
+            const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = currentImageData.data;
+
+            const halfSize = ERASER_SIZE / 2;
+            const startX = Math.max(0, x - halfSize);
+            const startY = Math.max(0, y - halfSize);
+            const endX = Math.min(canvas.width, x + halfSize);
+            const endY = Math.min(canvas.height, y + halfSize);
+
+            for (let i = startX; i < endX; i++) {
+                for (let j = startY; j < endY; j++) {
+                    const dist = Math.sqrt(Math.pow(i - x, 2) + Math.pow(j - y, 2));
+                    if (dist <= halfSize) {
+                        const originalColor = getPixelColor(originalImageData.data, i, j, canvas.width);
+                        setPixelColor(data, i, j, canvas.width, originalColor);
+                    }
+                }
+            }
+            ctx.putImageData(currentImageData, 0, 0);
+        }
+
+        // --- FLOOD FILL ALGORITHM (Kept as is) ---
+        function floodFill(data, x, y, width, height, targetColor, fillColor, isErase, originalImageData) {
+            if (x < 0 || x >= width || y < 0 || y >= height) return 0;
+
+            const queue = [[x, y]];
+            const visited = new Uint8Array(width * height);
+            let filledCount = 0;
+            
+            while (queue.length > 0) {
+                const [cx, cy] = queue.shift();
+
+                const pixelIndex = cy * width + cx;
+                if (visited[pixelIndex]) continue;
+
+                visited[pixelIndex] = 1;
+
+                const currentColor = getPixelColor(data, cx, cy, width);
+
+                let shouldFill = false;
+                let nextFillColor = fillColor;
+
+                if (isErase) {
+                    const originalPixelColor = getPixelColor(originalImageData.data, cx, cy, width);
+                    if (colorDifference(currentColor, originalPixelColor) > 50 || currentColor[3] < 250) { 
+                        shouldFill = true;
+                        nextFillColor = originalPixelColor; 
+                    }
+                } else {
+                    const diffFromTarget = colorDifference(currentColor, targetColor);
+                    
+                    if (diffFromTarget < GAP_TOLERANCE) {
+                        if (diffFromTarget < COLOR_TOLERANCE) {
+                            shouldFill = true;
+                        }
+                    } else {
+                        continue; 
+                    }
+                }
+
+                if (shouldFill) {
+                    setPixelColor(data, cx, cy, width, nextFillColor);
+                    filledCount++;
+                    
+                    const neighbors = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
+
+                    neighbors.forEach(([nx, ny]) => {
+                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                            const nIndex = ny * width + nx;
+                            if (!visited[nIndex]) {
+                                queue.push([nx, ny]);
+                            }
+                        }
+                    });
+                }
+            }
+            return filledCount;
+        }
+
+
+        // --- UNDO/CLEAR ADDITIONS (Kept as is) ---
+        undoBtn.addEventListener('click', () => {
+            if (history.length > 1) {
+                history.pop(); 
+                const previousState = history[history.length - 1]; 
+                restoreState(previousState);
+                updateUtilityButtonState();
+            } else if (history.length === 1) {
+                clearAll();
+            }
+        });
+        
+        clearAllBtn.addEventListener('click', clearAll);
+
+        function clearAll() {
+            if (!currentImage) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, 0, 0);
+            
+            history = [];
+            saveState(); 
+            updateUtilityButtonState();
+        }
+
+        // --- ZOOM AND PAN CONTROLS (Modified to integrate touch/pinch) ---
+        function setZoomLevel(newLevel) {
+            zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newLevel)); 
+            currentZoomLevelEl.textContent = `${Math.round(zoomLevel * 100)}%`;
+            applyZoomAndPan();
+        }
+
+        function applyZoomAndPan() {
+            canvasWrapper.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`;
+        }
+
+        zoomInBtn.onclick = () => setZoomLevel(zoomLevel + 0.2);
+        zoomOutBtn.onclick = () => setZoomLevel(zoomLevel - 0.2);
+        zoomResetBtn.onclick = () => {
+            setZoomLevel(1.0);
+            pan = { x: 0, y: 0, startX: 0, startY: 0 };
+            applyZoomAndPan();
+        };
+
+        // --- MOUSE PANNING (Only for desktop) ---
+        canvasWrapper.addEventListener('mousedown', (e) => {
+            if (activeEraser !== 0) return;
+            isDragging = true;
+            canvasWrapper.style.cursor = 'grabbing';
+            pan.startX = e.clientX - pan.x;
+            pan.startY = e.clientY - pan.y;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            if (activeEraser !== 0) return; 
+
+            pan.x = e.clientX - pan.startX;
+            pan.y = e.clientY - pan.startY;
+            applyZoomAndPan();
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            canvasWrapper.style.cursor = 'grab';
+        });
+        
+        // --- NEW: TOUCH/PINCH GESTURE HANDLING ---
+
+        function getDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        
+        canvasWrapper.addEventListener('touchstart', (e) => {
+            // Check if touch is for drag-erasing first
+            if (activeEraser === 2) return; 
+            
+            if (e.touches.length === 2) {
+                // Two-finger pinch zoom
+                initialPinchDistance = getDistance(e.touches);
+                initialZoom = zoomLevel;
+                isPanningTouch = false;
+            } else if (e.touches.length === 1) {
+                // One-finger pan
+                isPanningTouch = true;
+                pan.startX = e.touches[0].clientX - pan.x;
+                pan.startY = e.touches[0].clientY - pan.y;
+            }
+        }, { passive: true });
+
+        canvasWrapper.addEventListener('touchmove', (e) => {
+            if (activeEraser === 2) return;
+            
+            if (e.touches.length === 2) {
+                // Pinch-zoom calculation
+                e.preventDefault(); // Prevent scroll/default browser zoom
+                const currentDistance = getDistance(e.touches);
+                const scale = currentDistance / initialPinchDistance;
+                setZoomLevel(initialZoom * scale);
+                isPanningTouch = false;
+            } else if (e.touches.length === 1 && isPanningTouch) {
+                // One-finger pan calculation
+                e.preventDefault(); // Prevent scroll
+                pan.x = e.touches[0].clientX - pan.startX;
+                pan.y = e.touches[0].clientY - pan.startY;
+                applyZoomAndPan();
+            }
+        }, { passive: false }); // Non-passive to allow preventDefault
+
+        canvasWrapper.addEventListener('touchend', (e) => {
+            // Reset touch states
+            if (e.touches.length < 2) {
+                initialPinchDistance = null;
+            }
+            if (e.touches.length === 0) {
+                isPanningTouch = false;
+            }
+        });
+        
+        // --- END TOUCH/PINCH GESTURE HANDLING ---
+
+
+        // --- LABEL SCALE CONTROLS (Kept as is) ---
+        
+        function redrawLabels(newSize) {
+            currentLabelFontSize = newSize;
+            currentLabelStrokeWidth = Math.max(1, Math.round(newSize / 8)); 
+
+            if (currentImage) {
+                if (originalImageData) {
+                    // Restores the original image data, clearing all labels.
+                    restoreState(originalImageData); 
+                    // Note: User must re-label to see the new font size applied consistently.
+                }
+            }
+        }
+
+        labelScaleSlider.addEventListener('input', (e) => {
+            const newSize = parseInt(e.target.value);
+            redrawLabels(newSize);
+        });
+        
+        labelScaleResetBtn.addEventListener('click', () => {
+            labelScaleSlider.value = DEFAULT_LABEL_FONT_SIZE;
+            redrawLabels(DEFAULT_LABEL_FONT_SIZE);
+        });
+        
+        // --- DOWNLOAD FUNCTIONALITY (Kept as is) ---
+        downloadBtn.addEventListener('click', () => {
+            if (!currentImage) {
+                alert("No image loaded to download!");
+                return;
+            }
+
+            const dataURL = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'labeled_image.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        // Initial setup
+        renderLabels();
+        updateUtilityButtonState();
+        populateColorSwatches();
+        labelScaleSlider.value = DEFAULT_LABEL_FONT_SIZE; 
+    </script>
+</body>
+</html>
